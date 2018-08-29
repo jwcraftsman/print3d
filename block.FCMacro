@@ -1,0 +1,233 @@
+from Part import *
+import math
+from math import sqrt
+
+# Block dimension information:
+# https://www.cailliau.org/en/Alphabetical/L/Lego/Dimensions/General%20Considerations/
+# https://bricks.stackexchange.com/questions/288/what-are-the-dimensions-of-a-lego-brick
+
+mm = 1.0 # base unit is mm
+epsilon = 0.01*mm # small overlap for CAD purposes
+infinity = 1000*mm # very large number for CAD clipping purposes
+
+def block(number_of_x_knobs,
+          number_of_y_knobs,
+          number_of_vertical_units,
+          **kw):
+  has_knobs                 = kw.get('has_knobs', True)
+  has_knob_dimples          = kw.get('has_knob_dimples', False)
+  has_under_tubes           = kw.get('has_under_tubes', True)
+  has_under_tube_cavities   = kw.get('has_under_tube_cavities', True)
+  has_ridges                = kw.get('has_ridges', True)
+  has_vertical_holes        = kw.get('has_vertical_holes', False)
+  units = unit              = kw.get('unit',                        1.6 * mm   )
+  horizontal_pitch          = kw.get('horizontal_pitch',            5.0 * units)
+  vertical_pitch            = kw.get('vertical_pitch',              6.0 * units)
+  horizontal_play           = kw.get('horizontal_play',             0.1 * mm   )
+  bottom_play               = kw.get('bottom_play',                 0.0 * mm   )
+  notional_wall_thickness   = kw.get('notional_wall_thickness',     1.0 * unit )
+  if has_ridges:
+    wall_thickness          = kw.get('wall_thickness',              1.2 * mm   )
+  else:
+    wall_thickness          = kw.get('wall_thickness',              1.5 * mm   )
+  ridge_length              = kw.get('ridge_length',                0.6 * mm   )
+  top_thickness             = kw.get('top_thickness',               1.1 * mm   )
+  knob_height               = kw.get('knob_height',   1.0 * unit  + 0.2 * mm   )
+  knob_diameter             = kw.get('knob_diameter', 3.0 * units + 0.1 * mm   )
+  knob_dimple_height        = kw.get('knob_dimple_height',
+                                                      knob_height - 0.3 * mm   )
+  knob_dimple_diameter      = kw.get('knob_dimple_diameter',
+                                                      1.5 * units + 0.2 * mm   )
+  under_tube_outer_diameter = kw.get('under_tube_outer_diameter',
+                                              (5*sqrt(2)-3)*units - 0.1 * mm   )
+  under_tube_inner_diameter = kw.get('under_tube_inner_diameter',
+                                                      3.0 * units + 0.1 * mm   )
+
+  notional_width = number_of_x_knobs * horizontal_pitch
+  notional_depth = number_of_y_knobs * horizontal_pitch
+  notional_height = number_of_vertical_units * vertical_pitch
+
+  actual_width  = notional_width - 2.0*horizontal_play
+  actual_depth  = notional_depth - 2.0*horizontal_play
+  actual_height = notional_height
+
+  if has_ridges:
+    ridge_width = notional_wall_thickness - horizontal_play - wall_thickness
+
+  number_of_x_under_tubes = number_of_x_knobs - 1
+  number_of_y_under_tubes = number_of_y_knobs - 1
+
+  # Box of basic dimensions
+  b = makeBox(notional_width, notional_depth, notional_height)
+
+  # Cut away inner box leaving the edges and top
+  cavity_offset = wall_thickness + horizontal_play
+  cavity = makeBox(
+    notional_width - 2*cavity_offset,
+    notional_depth - 2*cavity_offset,
+    notional_height - top_thickness + epsilon)
+  cavity.translate((
+    cavity_offset,
+    cavity_offset,
+    -epsilon))
+  b = b.cut(cavity)
+
+  # Add side ridges aligned with each knob
+  if has_ridges:
+
+    # Top and bottom ridges
+    y_bottom = horizontal_play + wall_thickness - epsilon
+    y_top = notional_depth - horizontal_play - wall_thickness - ridge_width
+    for xi in range(number_of_x_knobs):
+      x = (xi + 0.5)*horizontal_pitch - (ridge_length/2.0)
+      bottom_ridge = makeBox(ridge_length, ridge_width + epsilon,
+                             notional_height - top_thickness + epsilon)
+      bottom_ridge.translate((x,y_bottom,0))
+      b = b.fuse(bottom_ridge)
+      top_ridge = makeBox(ridge_length, ridge_width + epsilon,
+                          notional_height - top_thickness + epsilon)
+      top_ridge.translate((x,y_top,0))
+      b = b.fuse(top_ridge)
+
+    # Left and right ridges
+    x_left = horizontal_play + wall_thickness - epsilon
+    x_right = notional_width - horizontal_play - wall_thickness - ridge_width
+    for yi in range(number_of_y_knobs):
+      y = (yi + 0.5)*horizontal_pitch - (ridge_length/2.0)
+      left_ridge = makeBox(ridge_width + epsilon, ridge_length,
+                           notional_height - top_thickness + epsilon)
+      left_ridge.translate((x_left,y,0))
+      b = b.fuse(left_ridge)
+      right_ridge = makeBox(ridge_width + epsilon, ridge_length,
+                            notional_height - top_thickness + epsilon)
+      right_ridge.translate((x_right,y,0))
+      b = b.fuse(right_ridge)
+
+  # Make knobs
+  if has_knobs:
+    for xi in range(number_of_x_knobs):
+      x = (xi + 0.5)*horizontal_pitch
+      for yi in range(number_of_y_knobs):
+        y = (yi + 0.5)*horizontal_pitch
+        knob = makeCylinder(knob_diameter/2.0,knob_height + epsilon)
+        knob.translate((x, y, notional_height - epsilon))
+        b = b.fuse(knob)
+        if has_knob_dimples:
+            knob_dimple = makeCylinder(
+                knob_dimple_diameter/2.0, knob_dimple_height + epsilon)
+            knob_dimple.translate((x, y,
+                                   notional_height - top_thickness - epsilon))
+            b = b.cut(knob_dimple)
+
+  # Make under tubes
+  if has_under_tubes:
+    for xi in range(number_of_x_under_tubes):
+      x = (xi + 1.0)*horizontal_pitch
+      for yi in range(number_of_y_under_tubes):
+        y = (yi + 1.0)*horizontal_pitch
+        tube = makeCylinder(under_tube_outer_diameter/2.0,
+                            notional_height - top_thickness + epsilon)
+        tube.translate((x, y, 0))
+        if has_vertical_holes:
+          tube_cavity_height = infinity
+        else:
+          tube_cavity_height = notional_height - top_thickness
+        tube_cavity = makeCylinder(under_tube_inner_diameter/2.0,
+                                   tube_cavity_height + epsilon)
+        tube_cavity.translate((x, y, -epsilon))
+        b = b.fuse(tube)
+        if has_under_tube_cavities:
+          b = b.cut(tube_cavity)
+
+  # Clip everything outside off the play boundary
+  play_boundary = makeBox(
+    actual_width,
+    actual_depth,
+    infinity-bottom_play)
+  play_boundary.translate((
+    horizontal_play,
+    horizontal_play,
+    bottom_play))
+  b = b.common(play_boundary)
+
+  return b
+
+
+
+
+
+
+def tube(number_of_x_knobs,
+          number_of_y_knobs,
+          number_of_vertical_units,
+          **kw):
+  has_under_tube_cavities   = kw.get('has_under_tube_cavities', True)
+  units = unit              = kw.get('unit',                        1.6 * mm   )
+  horizontal_pitch          = kw.get('horizontal_pitch',            5.0 * units)
+  vertical_pitch            = kw.get('vertical_pitch',              6.0 * units)
+  top_thickness             = kw.get('top_thickness',               1.1 * mm   )
+  under_tube_outer_diameter = kw.get('under_tube_outer_diameter',
+                                              (5*sqrt(2)-3)*units - 0.1 * mm   )
+  under_tube_inner_diameter = kw.get('under_tube_inner_diameter',
+                                                      3.0 * units + 0.1 * mm   )
+
+  notional_height = number_of_vertical_units * vertical_pitch
+
+  number_of_x_under_tubes = number_of_x_knobs - 1
+  number_of_y_under_tubes = number_of_y_knobs - 1
+
+  # Make under tubes
+  for xi in range(number_of_x_under_tubes):
+    x = (xi + 1.0)*horizontal_pitch
+    for yi in range(number_of_y_under_tubes):
+      y = (yi + 1.0)*horizontal_pitch
+      tube = makeCylinder(under_tube_outer_diameter/2.0,
+                          notional_height - top_thickness + epsilon)
+      tube.translate((x, y, 0))
+      tube_cavity = makeCylinder(under_tube_inner_diameter/2.0,
+                                 notional_height - top_thickness + epsilon)
+      tube_cavity.translate((x, y, -epsilon))
+      b = tube
+      if has_under_tube_cavities:
+        b = b.cut(tube_cavity)
+
+  return b
+
+
+
+
+#b = block(2,2,1/3.0,top_thickness=-0.02,unit=1.6*2))
+#b = block(2,2,1/3.0,has_ridges=False) # block4
+#b = block(2,2,1/3.0,has_ridges=False,has_under_tube_cavities=False) # block5
+#b = block(2,2,1/3.0,has_ridges=False,has_under_tubes=False,has_knobs=False) # block6
+#b = block(2,2,1/3.0,wall_thickness=1.4,has_ridges=False,has_under_tubes=False,has_knobs=False) # block7
+#b = block(2,2,1/3.0,wall_thickness=1.45,has_ridges=False,has_under_tubes=False,has_knobs=False) # block8
+#b = block(2,2,1,wall_thickness=1.45,has_ridges=False,under_tube_outer_diameter=(5*sqrt(2)-3)*(1.6)+0.05,
+#          bottom_play=0.1) # block9
+#b = block(2,8,1/3.0,wall_thickness=1.45,has_ridges=False,under_tube_outer_diameter=(5*sqrt(2)-3)*(1.6)+0.05,
+#          bottom_play=0.1) # block10
+
+#b = tube(2,2,1,has_under_tube_cavities=False) # tube1
+#b = tube(2,2,1,has_under_tube_cavities=False,under_tube_outer_diameter = (5*sqrt(2)-3)*(1.6) - 0.1 +0.05) # tube2
+#b = tube(2,2,1,has_under_tube_cavities=True,under_tube_outer_diameter = (5*sqrt(2)-3)*(1.6) - 0.1 +0.05) # tube3
+#b = tube(2,2,1,has_under_tube_cavities=False,under_tube_outer_diameter = (5*sqrt(2)-3)*(1.6)) # tube4
+#b = tube(2,2,1,has_under_tube_cavities=True,under_tube_outer_diameter = (5*sqrt(2)-3)*(1.6)) # tube5
+#b = tube(2,2,1,has_under_tube_cavities=False,under_tube_outer_diameter = (5*sqrt(2)-3)*(1.6)+0.05) # tube6
+#b = tube(2,2,1,has_under_tube_cavities=True,under_tube_outer_diameter = (5*sqrt(2)-3)*(1.6)+0.05) # tube7
+#b = tube(2,2,1,has_under_tube_cavities=False,under_tube_outer_diameter = (5*sqrt(2)-3)*(1.6)+0.10) # tube8
+#b = tube(2,2,1,has_under_tube_cavities=True,under_tube_outer_diameter = (5*sqrt(2)-3)*(1.6)+0.10) # tube9
+
+#b = block(2,2,1,has_ridges=False,under_tube_outer_diameter=(5*sqrt(2)-3)*(1.6)+0.1,
+#          bottom_play=0.1,knob_diameter=3.0*1.6 + 0.20) # block11
+#b = block(2,2,1/3.0,has_ridges=False,under_tube_outer_diameter=(5*sqrt(2)-3)*(1.6)+0.1,
+#          bottom_play=0.1,knob_diameter=3.0*1.6 + 0.15) # block12
+#b = block(2,2,1,has_ridges=False,under_tube_outer_diameter=(5*sqrt(2)-3)*(1.6)+0.1,
+#          bottom_play=0.1,knob_diameter=3.0*1.6 + 0.15) # block13
+#b = block(2,6,1/3.0,has_ridges=False,under_tube_outer_diameter=(5*sqrt(2)-3)*(1.6)+0.1,
+#          bottom_play=0.1,knob_diameter=3.0*1.6 + 0.15,has_vertical_holes=1) # block14
+#b = block(2,4,1,has_ridges=False,under_tube_outer_diameter=(5*sqrt(2)-3)*(1.6)+0.1,
+#          bottom_play=0.1,knob_diameter=3.0*1.6 + 0.15) # block15
+b = block(2,6,1/3.0,has_ridges=False,under_tube_outer_diameter=(5*sqrt(2)-3)*(1.6)+0.1,
+          bottom_play=0.1,knob_diameter=3.0*1.6 + 0.15) # block16
+
+show(b)
