@@ -1,4 +1,4 @@
-Print3D
+print3d
 =======
 
 This project contains various utilities and documentation related to

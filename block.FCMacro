@@ -1,6 +1,7 @@
 from Part import *
 import math
 from math import sqrt
+from FreeCAD import Base
 
 # Block dimension information:
 # https://www.cailliau.org/en/Alphabetical/L/Lego/Dimensions/General%20Considerations/
@@ -20,6 +21,7 @@ def block(number_of_x_knobs,
   has_under_tube_cavities   = kw.get('has_under_tube_cavities', True)
   has_ridges                = kw.get('has_ridges', True)
   has_vertical_holes        = kw.get('has_vertical_holes', False)
+  has_horizontal_holes      = kw.get('has_horizontal_holes', False)
   units = unit              = kw.get('unit',                        1.6 * mm   )
   horizontal_pitch          = kw.get('horizontal_pitch',            5.0 * units)
   vertical_pitch            = kw.get('vertical_pitch',              6.0 * units)
@@ -42,7 +44,19 @@ def block(number_of_x_knobs,
                                               (5*sqrt(2)-3)*units - 0.1 * mm   )
   under_tube_inner_diameter = kw.get('under_tube_inner_diameter',
                                                       3.0 * units + 0.1 * mm   )
-
+  horizontal_hole_diameter = kw.get('horizontal_hole_diameter',
+                                                        3.0 * units + 0.1 * mm ) # knob diameter
+  horizontal_hole_counterbore_diameter = kw.get('horizontal_hole_counterbore_diameter',
+                                                       3.75 * units + 0.2 * mm )
+  notional_horizontal_hole_counterbore_depth = kw.get('notional_horizontal_hole_counterbore_depth',
+                                                                       0.9 * mm)
+  horizontal_tube_wall_thickness = kw.get('horizontal_tube_wall_thickness',
+                                                           wall_thickness - 0.2)
+  horizontal_tube_outer_diameter = kw.get('horizontal_tube_outer_diameter',
+                    horizontal_hole_diameter + 2*horizontal_tube_wall_thickness)
+  horizontal_hole_vertical_offset = kw.get('horizontal_hole_vertical_offset',
+                                                        3.5 * units + 0.2 * mm )
+  
   notional_width = number_of_x_knobs * horizontal_pitch
   notional_depth = number_of_y_knobs * horizontal_pitch
   notional_height = number_of_vertical_units * vertical_pitch
@@ -139,6 +153,63 @@ def block(number_of_x_knobs,
         if has_under_tube_cavities:
           b = b.cut(tube_cavity)
 
+  # Make horizontal tubes
+  if has_horizontal_holes:
+    x = epsilon
+    for i, yi in enumerate(range(number_of_y_knobs)):
+      y = (yi + 0.5) * horizontal_pitch
+
+      # Make a solid tube
+      tube = makeCylinder(horizontal_tube_outer_diameter/2.0,
+			  actual_width - 2*epsilon)
+     
+      # Rotate the tube 90 degress about y-axis 
+      tube.rotate(Base.Vector(0,0,0), Base.Vector(0,1,0), 90)
+
+      # Move the tube to the right place
+      tube.translate((x, y, horizontal_hole_vertical_offset))
+
+      # Add the tube to the block
+      b = b.fuse(tube)
+
+      # Create the tube cavity
+      tube_cavity = makeCylinder(horizontal_hole_diameter/2.0,
+			         actual_width + 2*infinity)
+      tube_cavity.translate((0, 0, -infinity))
+
+      # Rotate the tube cavity 90 degress about y-axis 
+      tube_cavity.rotate(Base.Vector(0,0,0), Base.Vector(0,1,0), 90)
+
+      # Move the tube cavity to the right place
+      tube_cavity.translate((x, y, horizontal_hole_vertical_offset))
+
+      # Cut the tube cavity out of the block
+      b = b.cut(tube_cavity)
+
+      # Create the closest counterbore cavity
+      counterbore_cavity = makeCylinder(horizontal_hole_counterbore_diameter/2.0,
+			                notional_horizontal_hole_counterbore_depth + infinity)
+      counterbore_cavity.translate((0, 0, -infinity))
+      counterbore_cavity.rotate(Base.Vector(0,0,0), Base.Vector(0,1,0), 90)
+      counterbore_cavity.translate((x, y, horizontal_hole_vertical_offset))
+      b = b.cut(counterbore_cavity)
+      
+      # Create the opposite counterbore cavity
+      counterbore_cavity = makeCylinder(horizontal_hole_counterbore_diameter/2.0,
+			                notional_horizontal_hole_counterbore_depth)
+      counterbore_cavity.translate((0, 0, -notional_horizontal_hole_counterbore_depth))
+      counterbore_cavity.rotate(Base.Vector(0,0,0), Base.Vector(0,1,0), 90)
+      counterbore_cavity.translate((x + horizontal_pitch, y, horizontal_hole_vertical_offset))
+      b = b.cut(counterbore_cavity)
+
+      # Keystone cutout for printing
+      if 1: #i == 0:
+        w = 2.0 * mm
+        h = 2.0 * mm
+        keystone = makeBox(actual_width, w, h)
+        keystone.translate((x, y - w/2.0, horizontal_hole_vertical_offset + horizontal_hole_counterbore_diameter/2.0 - h +0.1 ))
+        b = b.cut(keystone)
+        
   # Clip everything outside off the play boundary
   play_boundary = makeBox(
     actual_width,
@@ -227,7 +298,14 @@ def tube(number_of_x_knobs,
 #          bottom_play=0.1,knob_diameter=3.0*1.6 + 0.15,has_vertical_holes=1) # block14
 #b = block(2,4,1,has_ridges=False,under_tube_outer_diameter=(5*sqrt(2)-3)*(1.6)+0.1,
 #          bottom_play=0.1,knob_diameter=3.0*1.6 + 0.15) # block15
-b = block(2,6,1/3.0,has_ridges=False,under_tube_outer_diameter=(5*sqrt(2)-3)*(1.6)+0.1,
-          bottom_play=0.1,knob_diameter=3.0*1.6 + 0.15) # block16
+#b = block(2,6,1/3.0,has_ridges=False,under_tube_outer_diameter=(5*sqrt(2)-3)*(1.6)+0.1,
+#          bottom_play=0.1,knob_diameter=3.0*1.6 + 0.15) # block16
+#b = block(1,2,1.0,has_ridges=False,has_under_tubes=False, knob_diameter=3.0*1.6 + 0.15,
+#          bottom_play=0.1, has_horizontal_holes=True) # block17
+units=1.6
+b = block(1,2,1.0,has_ridges=False,has_under_tubes=False, knob_diameter=3.0*1.6 + 0.15,
+          bottom_play=0.1, has_horizontal_holes=True, horizontal_hole_diameter=3.0 * units + 0.05 * mm, has_knobs=False) # block18
+#b = block(1,2,1.0,has_ridges=False,has_under_tubes=False, knob_diameter=3.0*1.6 + 0.15,
+#          bottom_play=0.1, has_horizontal_holes=True, horizontal_hole_diameter=3.0 * units) # block19
 
 show(b)
