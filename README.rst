@@ -100,7 +100,7 @@ Files
 
 :FCUtil/block.py: FreeCAD functions for creating blocks.
 		  
-:FCMacro/test_block.FCMacro: FreeCAD Macro file that utilizes block.py.
+:FCMacro/block_test.FCMacro: FreeCAD Macro file that utilizes block.py.
 
 :block.ini: Settings used for printing blocks on a Prusa i3 MK3 with
             Slic3rPE-1.40.1.linux64-full-201807051330.AppImage
