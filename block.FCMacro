@@ -15,11 +15,13 @@ def block(number_of_x_knobs,
           number_of_y_knobs,
           number_of_vertical_units,
           **kw):
+  solid                     = kw.get('solid', False)
   has_knobs                 = kw.get('has_knobs', True)
   has_knob_dimples          = kw.get('has_knob_dimples', False)
   has_under_tubes           = kw.get('has_under_tubes', True)
   has_under_tube_cavities   = kw.get('has_under_tube_cavities', True)
-  has_ridges                = kw.get('has_ridges', True)
+  has_ridges                = kw.get('has_ridges', False)
+  has_struts                = kw.get('has_struts', False)
   has_vertical_holes        = kw.get('has_vertical_holes', False)
   has_horizontal_holes      = kw.get('has_horizontal_holes', False)
   units = unit              = kw.get('unit',                        1.6 * mm   )
@@ -44,6 +46,12 @@ def block(number_of_x_knobs,
                                               (5*sqrt(2)-3)*units - 0.1 * mm   )
   under_tube_inner_diameter = kw.get('under_tube_inner_diameter',
                                                       3.0 * units + 0.1 * mm   )
+  strut_gap                 = kw.get('strut_gap',                   2.3 * mm   )
+  strut_width               = kw.get('strut_width',                 1.0 * mm   )
+  strut_interval            = kw.get('strut_interval',              2          )
+  strut_sides               = kw.get('strut_sides',                 2          )
+  horizontal_hole_interval  = kw.get('horizontal_hole_interval',    1          )
+  horizontal_hole_offset    = kw.get('horizontal_hole_offset', horizontal_pitch)
   horizontal_hole_diameter = kw.get('horizontal_hole_diameter',
                                                         3.0 * units + 0.1 * mm ) # knob diameter
   horizontal_hole_counterbore_diameter = kw.get('horizontal_hole_counterbore_diameter',
@@ -71,20 +79,28 @@ def block(number_of_x_knobs,
   number_of_x_under_tubes = number_of_x_knobs - 1
   number_of_y_under_tubes = number_of_y_knobs - 1
 
-  # Box of basic dimensions
+  number_of_struts = int(math.floor((number_of_y_knobs - 1)/strut_interval))
+
+  number_of_horizontal_holes = int(math.floor((number_of_y_knobs)/horizontal_hole_interval))
+  print('a',number_of_horizontal_holes,horizontal_hole_offset,number_of_y_knobs)
+  if horizontal_hole_offset > (horizontal_pitch + 0.1):
+    number_of_horizontal_holes -= 1
+  
+# Box of basic dimensions
   b = makeBox(notional_width, notional_depth, notional_height)
 
   # Cut away inner box leaving the edges and top
-  cavity_offset = wall_thickness + horizontal_play
-  cavity = makeBox(
-    notional_width - 2*cavity_offset,
-    notional_depth - 2*cavity_offset,
-    notional_height - top_thickness + epsilon)
-  cavity.translate((
-    cavity_offset,
-    cavity_offset,
-    -epsilon))
-  b = b.cut(cavity)
+  if not solid:
+    cavity_offset = wall_thickness + horizontal_play
+    cavity = makeBox(
+      notional_width - 2*cavity_offset,
+      notional_depth - 2*cavity_offset,
+      notional_height - top_thickness + epsilon)
+    cavity.translate((
+      cavity_offset,
+      cavity_offset,
+      -epsilon))
+    b = b.cut(cavity)
 
   # Add side ridges aligned with each knob
   if has_ridges:
@@ -117,6 +133,18 @@ def block(number_of_x_knobs,
       right_ridge.translate((x_right,y,0))
       b = b.fuse(right_ridge)
 
+  # Add struts aligned with under-tube knob
+  if has_struts:
+    for yi in range(number_of_struts):
+      y = (yi + 1) * strut_interval * horizontal_pitch
+      if strut_sides == 1:
+      	strut_length = notional_width/2.0-2.0*epsilon
+      else:
+        strut_length = notional_width-2.0*epsilon
+      strut = makeBox(strut_length, strut_width, notional_height - strut_gap - epsilon)
+      strut.translate((epsilon, y-strut_width/2.0, strut_gap))
+      b = b.fuse(strut)
+      
   # Make knobs
   if has_knobs:
     for xi in range(number_of_x_knobs):
@@ -156,8 +184,8 @@ def block(number_of_x_knobs,
   # Make horizontal tubes
   if has_horizontal_holes:
     x = epsilon
-    for i, yi in enumerate(range(number_of_y_knobs)):
-      y = (yi + 0.5) * horizontal_pitch
+    for i, yi in enumerate(range(number_of_horizontal_holes)):
+      y = horizontal_hole_offset + yi * horizontal_hole_interval * horizontal_pitch
 
       # Make a solid tube
       tube = makeCylinder(horizontal_tube_outer_diameter/2.0,
@@ -223,49 +251,183 @@ def block(number_of_x_knobs,
 
   return b
 
+def myblock(number_of_x_knobs,
+	    number_of_y_knobs,
+	    number_of_vertical_units,
+            **kw):
+  units = unit                    = kw.get('unit',                         1.6 * mm   )
+  kw['knob_diameter']             = kw.get('knob_diameter', 3.0 * units + 0.15 * mm   )
+  kw['bottom_play']               = kw.get('bottom_play',                  0.1 * mm   )
+  kw['under_tube_outer_diameter'] = kw.get('under_tube_outer_diameter',
+                                                     (5*sqrt(2)-3)*units + 0.1 * mm   )
+  return block(number_of_x_knobs,
+	       number_of_y_knobs,
+	       number_of_vertical_units,
+               **kw)
 
+def vsplit(b, v):
+  boundary = makeBox(infinity*2, infinity*2, infinity)
+  boundary.translate((-infinity,-infinity,v))
+  top_b = b.common(boundary)
+  bottom_b = b.cut(boundary)
+  return top_b, bottom_b
+  
+def box_corner():
+  hunit = 5*1.6
+  vunit = 6*1.6
 
+  # middle layer
+  b  = myblock(1,2,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False)
+  
+  b2 = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False)
+  b2.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
+  b2.translate((hunit,hunit,0))
+  b = b.fuse(b2)
+  
+  b3 = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False)
+  b3.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
+  b3.translate((hunit,hunit*2,0))
+  b = b.fuse(b3)
 
+  # top layer
+  b4  = myblock(1,2,1,has_under_tubes=False,has_horizontal_holes=False,bottom_play=0.0,horizontal_play=0.0,has_knobs=False,solid=True)
+  b4.translate((0,0,vunit))
+  b = b.fuse(b4)
 
+  b5 = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True)
+  b5.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
+  b5.translate((hunit,hunit,vunit))
+  b = b.fuse(b5)
 
-def tube(number_of_x_knobs,
-          number_of_y_knobs,
-          number_of_vertical_units,
-          **kw):
-  has_under_tube_cavities   = kw.get('has_under_tube_cavities', True)
-  units = unit              = kw.get('unit',                        1.6 * mm   )
-  horizontal_pitch          = kw.get('horizontal_pitch',            5.0 * units)
-  vertical_pitch            = kw.get('vertical_pitch',              6.0 * units)
-  top_thickness             = kw.get('top_thickness',               1.1 * mm   )
-  under_tube_outer_diameter = kw.get('under_tube_outer_diameter',
-                                              (5*sqrt(2)-3)*units - 0.1 * mm   )
-  under_tube_inner_diameter = kw.get('under_tube_inner_diameter',
-                                                      3.0 * units + 0.1 * mm   )
+  b6 = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True)
+  b6.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
+  b6.translate((hunit,hunit*2,vunit))
+  b = b.fuse(b6)
 
-  notional_height = number_of_vertical_units * vertical_pitch
+  # Slot #1 in the top layer
+  slot = makeBox(2.5,vunit*.7,vunit*.7)
+  slot.translate((1.5,0,vunit*(2-.7)))
+  b = b.cut(slot)
+  
+  # Slot #2 in the top layer
+  slot = makeBox(2.5,vunit*.7,vunit*.7)
+  slot.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
+  slot.translate((0,2*hunit-1.5,vunit*(2-.7)))
+  #slot.translate((0,hunit*2-2.5-1.5,vunit*(2-.7)))
+  b = b.cut(slot)
+  
+  # bottom layer
+  b7  = myblock(2,2,1,has_under_tubes=True,has_horizontal_holes=False,bottom_play=0.0,horizontal_play=0.0,solid=False,has_knobs=False,
+                top_thickness=1.1+2.5)
+  b7.translate((0,0,-vunit))
 
-  number_of_x_under_tubes = number_of_x_knobs - 1
-  number_of_y_under_tubes = number_of_y_knobs - 1
+  # Slot in the bottom layer
+  slot = makeBox(vunit*.7,hunit*2.0,2.5)
+  slot.translate((0,0,-2.5))
+  b7 = b7.cut(slot)
+  b = b.fuse(b7)
 
-  # Make under tubes
-  for xi in range(number_of_x_under_tubes):
-    x = (xi + 1.0)*horizontal_pitch
-    for yi in range(number_of_y_under_tubes):
-      y = (yi + 1.0)*horizontal_pitch
-      tube = makeCylinder(under_tube_outer_diameter/2.0,
-                          notional_height - top_thickness + epsilon)
-      tube.translate((x, y, 0))
-      tube_cavity = makeCylinder(under_tube_inner_diameter/2.0,
-                                 notional_height - top_thickness + epsilon)
-      tube_cavity.translate((x, y, -epsilon))
-      b = tube
-      if has_under_tube_cavities:
-        b = b.cut(tube_cavity)
-
+  # Clip everything outside off the play boundary
+  play_boundary = makeBox(
+    hunit*2-2*0.1,
+    hunit*2-2*0.1,
+    vunit*3-0.1 + vunit) # extra vunit for knobs
+  play_boundary.translate((
+    0.1,
+    0.1,
+    0.1-vunit))
+  b = b.common(play_boundary)
+  
   return b
 
+def box_side(length):
+  hunit = 5*1.6
+  vunit = 6*1.6
 
+  # middle layer
+  b  = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False,
+               horizontal_hole_offset=0.5*hunit)
+  b.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
+  b.translate((0,hunit,0))
 
+  ba = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False,
+               horizontal_hole_offset=0.5*hunit)
+  ba.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
+  ba.translate((0,hunit*length,0))
+  b = b.fuse(ba)
+
+  b2 = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False,
+               horizontal_hole_offset=0.5*hunit)
+  b2.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
+  b2.translate((hunit,hunit,0))
+  b = b.fuse(b2)
+  
+  b2a = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False,
+               horizontal_hole_offset=0.5*hunit)
+  b2a.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
+  b2a.translate((hunit,hunit*length,0))
+  b = b.fuse(b2a)
+  
+  b3 = myblock(1,length-2,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False,
+    horizontal_hole_interval=2, horizontal_hole_offset=2.0*hunit)
+  b3.translate((0,hunit,0))
+  b = b.fuse(b3)
+
+  b3a = myblock(1,length-2,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False,
+    horizontal_hole_interval=2)
+  b3a.translate((hunit,hunit,0))
+  b = b.fuse(b3a)
+
+  # top layer
+  b4  = myblock(1,length,1,has_under_tubes=False,has_horizontal_holes=False,bottom_play=0.0,horizontal_play=0.0,has_knobs=False,solid=True)
+  b4.translate((0,0,vunit))
+  b = b.fuse(b4)
+
+  b5 = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,
+               horizontal_hole_offset=0.5*hunit)
+  b5.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
+  b5.translate((hunit,hunit,vunit))
+  b = b.fuse(b5)
+
+  b5a = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,
+               horizontal_hole_offset=0.5*hunit)
+  b5a.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
+  b5a.translate((hunit,hunit*length,vunit))
+  b = b.fuse(b5a)
+
+  b6 = myblock(1,length-2,1,has_under_tubes=False,has_horizontal_holes=False,bottom_play=0.0,horizontal_play=0.0,solid=True)
+  b6.translate((hunit,hunit,vunit))
+  b = b.fuse(b6)
+
+  # Slot #1 in the top layer
+  slot = makeBox(2.5,length*hunit,vunit*.7)
+  slot.translate((1.5,0,vunit*(2-.7)))
+  b = b.cut(slot)
+  
+  # bottom layer
+  b7  = myblock(2,length,1,has_under_tubes=True,has_horizontal_holes=False,bottom_play=0.0,horizontal_play=0.0,solid=False,has_knobs=False,
+                top_thickness=1.1+2.5,has_struts=0,strut_sides=1)
+  b7.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), 180)
+  b7.translate((2*hunit,length*hunit,-vunit))
+
+  # Slot in the bottom layer
+  slot = makeBox(vunit*.7,hunit*length,2.5)
+  slot.translate((0,0,-2.5))
+  b7 = b7.cut(slot)
+  b = b.fuse(b7)
+
+  # Clip everything outside off the play boundary
+  play_boundary = makeBox(
+    hunit*2-2*0.1,
+    hunit*length-2*0.1,
+    vunit*3-0.1 + vunit) # extra vunit for knobs
+  play_boundary.translate((
+    0.1,
+    0.1,
+    0.1-vunit))
+  b = b.common(play_boundary)
+  
+  return b
 
 #b = block(2,2,1/3.0,top_thickness=-0.02,unit=1.6*2))
 #b = block(2,2,1/3.0,has_ridges=False) # block4
@@ -287,7 +449,6 @@ def tube(number_of_x_knobs,
 #b = tube(2,2,1,has_under_tube_cavities=True,under_tube_outer_diameter = (5*sqrt(2)-3)*(1.6)+0.05) # tube7
 #b = tube(2,2,1,has_under_tube_cavities=False,under_tube_outer_diameter = (5*sqrt(2)-3)*(1.6)+0.10) # tube8
 #b = tube(2,2,1,has_under_tube_cavities=True,under_tube_outer_diameter = (5*sqrt(2)-3)*(1.6)+0.10) # tube9
-
 #b = block(2,2,1,has_ridges=False,under_tube_outer_diameter=(5*sqrt(2)-3)*(1.6)+0.1,
 #          bottom_play=0.1,knob_diameter=3.0*1.6 + 0.20) # block11
 #b = block(2,2,1/3.0,has_ridges=False,under_tube_outer_diameter=(5*sqrt(2)-3)*(1.6)+0.1,
@@ -302,10 +463,40 @@ def tube(number_of_x_knobs,
 #          bottom_play=0.1,knob_diameter=3.0*1.6 + 0.15) # block16
 #b = block(1,2,1.0,has_ridges=False,has_under_tubes=False, knob_diameter=3.0*1.6 + 0.15,
 #          bottom_play=0.1, has_horizontal_holes=True) # block17
-units=1.6
-b = block(1,2,1.0,has_ridges=False,has_under_tubes=False, knob_diameter=3.0*1.6 + 0.15,
-          bottom_play=0.1, has_horizontal_holes=True, horizontal_hole_diameter=3.0 * units + 0.05 * mm, has_knobs=False) # block18
 #b = block(1,2,1.0,has_ridges=False,has_under_tubes=False, knob_diameter=3.0*1.6 + 0.15,
-#          bottom_play=0.1, has_horizontal_holes=True, horizontal_hole_diameter=3.0 * units) # block19
+#          bottom_play=0.1, has_horizontal_holes=True, horizontal_hole_diameter=3.0 * 1.6 + 0.05 * mm, has_knobs=False) # block18
+#b = block(1,2,1.0,has_ridges=False,has_under_tubes=False, knob_diameter=3.0*1.6 + 0.15,
+#          bottom_play=0.1, has_horizontal_holes=True, horizontal_hole_diameter=3.0 * 1.6) # block19
 
-show(b)
+if False:
+  b = box_corner()
+  show(b)
+   
+  b2 = box_corner()
+  b2.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -180)
+  b2.translate((-0.3, 2*5*1.6, 0))
+  show(b2)
+   
+  bridge = makeBox(2.0, 2*5*1.6-2*.1, 0.150)
+  bridge.translate((-1.0, 0.1, 0))
+  show(bridge)
+
+if True:
+  hunit = 5*1.6
+  vunit = 6*1.6
+  b = box_side(12)
+  top_b, bottom_b = vsplit(b, -2.5)
+  bridge = makeBox(2.2+.1+vunit*.7, 12*hunit, 0.150)
+  bridge.translate((-2.2, 0, 0))
+  support = makeBox(1.2, 12*hunit, vunit-.1)
+  support.translate((-2.2,0,-vunit+.1))
+  support = support.fuse(bridge)
+  top_b = top_b.fuse(support)
+  show(top_b)
+  show(bottom_b)
+  #show(support)
+
+if False:
+  b = myblock(2,6,1,has_struts=1,strut_sides=1)
+  show(b)
+  
