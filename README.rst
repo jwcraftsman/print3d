@@ -74,6 +74,8 @@ Basically, the process is:
 
 - Convert text to paths using the `Path->Object to path` menu.
 - Ungroup your objects
+- Select all objects and apply a stroke style with a width of 0 mm to
+  all objects.  This makes dimensions the same between inkscape and FreeCAD.
 - Save as `Plain SVG (*.svg)` file format
 - Choose the `SVG as geometry (importSVG)` option when importing the file
   into FreeCAD.
