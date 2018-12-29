@@ -52,12 +52,14 @@ if False:
   bridge.translate((-1.0, 0.1, 0))
   show(bridge)
 
+# box_side_bottom_with_support
 if True:
   hunit = 5*1.6
   vunit = 6*1.6
-  b = box_side(12)
+  slot_depth = 0.7*vunit
+  b = box_side_bottom(12)
   top_b, bottom_b = vsplit(b, -2.5)
-  bridge = makeBox(2.2+.1+vunit*.7, 12*hunit, 0.150)
+  bridge = makeBox(2.2+.1+slot_depth, 12*hunit, 0.150)
   bridge.translate((-2.2, 0, 0))
   support = makeBox(1.2, 12*hunit, vunit-.1)
   support.translate((-2.2,0,-vunit+.1))
@@ -66,6 +68,10 @@ if True:
   show(top_b)
   show(bottom_b)
   #show(support)
+
+if False:
+  b = box_side_bottom(12)
+  show(b)
 
 if False:
   b = myblock(2,6,1,has_struts=1,strut_sides=1)

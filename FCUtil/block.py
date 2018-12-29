@@ -429,3 +429,135 @@ def box_side(length):
   
   return b
   
+def box_side_bottom(length):
+  hunit = 5*1.6
+  vunit = 6*1.6
+  slot_width = 2.5 # mm
+  slot_depth = 0.7*vunit
+  
+  # middle layer end inside
+  b  = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False,
+               horizontal_hole_offset=0.5*hunit)
+  b.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
+  b.translate((0,hunit,0))
+
+  ba = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False,
+               horizontal_hole_offset=0.5*hunit)
+  ba.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
+  ba.translate((0,hunit*length,0))
+  b = b.fuse(ba)
+
+  # middle layer end outside
+  b2 = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False,
+               horizontal_hole_offset=0.5*hunit)
+  b2.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
+  b2.translate((hunit,hunit,0))
+  b = b.fuse(b2)
+  
+  b2a = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False,
+               horizontal_hole_offset=0.5*hunit)
+  b2a.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
+  b2a.translate((hunit,hunit*length,0))
+  b = b.fuse(b2a)
+  
+  # middle layer outside
+  b3 = myblock(1,2,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False,
+    horizontal_hole_interval=2)
+  b3.translate((hunit,hunit,0))
+  b = b.fuse(b3)
+
+  b3a = myblock(1,2,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False,
+    horizontal_hole_interval=2)
+  b3a.translate((hunit,hunit*(length-3),0))
+  b = b.fuse(b3a)
+
+  # top layer end outside
+  b5 = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False,
+               horizontal_hole_offset=0.5*hunit)
+  b5.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
+  b5.translate((hunit,hunit,vunit))
+  b = b.fuse(b5)
+
+  b5a = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False,
+               horizontal_hole_offset=0.5*hunit)
+  b5a.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
+  b5a.translate((hunit,hunit*length,vunit))
+  b = b.fuse(b5a)
+
+  # Slot #1 in the top layer
+  #slot = makeBox(slot_width,length*hunit,slot_depth)
+  #slot.translate((1.5,0,vunit*2-slot_depth))
+  #b = b.cut(slot)
+  
+  # bottom layer
+  b7  = myblock(2,length,1,has_under_tubes=False,has_horizontal_holes=False,bottom_play=0.0,horizontal_play=0.0,solid=False,has_knobs=False,
+                top_thickness=1.1+slot_width,has_struts=0,strut_sides=1)
+  b7.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), 180)
+  b7.translate((2*hunit,length*hunit,-vunit))
+
+  # Slot in the bottom layer
+  slot = makeBox(slot_depth,hunit*length,slot_width)
+  slot.translate((0,0,-slot_width))
+  b7 = b7.cut(slot)
+  b = b.fuse(b7)
+
+  # Top of slot
+  b8 = makeBox(hunit,hunit*length,1.0)
+  b = b.fuse(b8)
+  
+  # Right wall of slot
+  b9 = makeBox(1.0,hunit*(length-2),slot_depth+1.0)
+  b9.translate((hunit-1.0,hunit,0))
+  b = b.fuse(b9)
+  b9a1 = makeBox(1.0,hunit+slot_depth+1,vunit)
+  b9a1.translate((hunit-1.0,0,slot_depth))
+  b = b.fuse(b9a1)
+  b9a2 = makeBox(1.0,hunit+slot_depth+1,vunit)
+  b9a2.translate((hunit-1.0,hunit*(length-1)-slot_depth-1,slot_depth))
+  b = b.fuse(b9a2)
+  b9b1 = makeBox(1.0,2*hunit,vunit)
+  b9b1.translate((hunit-1.0,hunit,0))
+  b = b.fuse(b9b1)
+  b9b2 = makeBox(1.0,2*hunit,vunit)
+  b9b2.translate((hunit-1.0,hunit*(length-3),0))
+  b = b.fuse(b9b2)
+  
+  # Left wall of slot
+  b10 = makeBox(1.0,hunit*(length-2),slot_depth+1.0)
+  b10.translate((hunit-1.0-1.0-slot_width,hunit,0))
+  b = b.fuse(b10)
+  b10a1 = makeBox(1.0,slot_depth+1,vunit)
+  b10a1.translate((hunit-1.0-1.0-slot_width,hunit,slot_depth))
+  b = b.fuse(b10a1)
+  b10a2 = makeBox(1.0,slot_depth+1,vunit)
+  b10a2.translate((hunit-1.0-1.0-slot_width,hunit*(length-1)-slot_depth-1,slot_depth))
+  b = b.fuse(b10a2)
+  b10b1 = makeBox(1.0,hunit+slot_depth+1,slot_depth)
+  b10b1.translate((hunit-1.0-1.0-slot_width,0,vunit))
+  b = b.fuse(b10b1)
+  b10b2 = makeBox(1.0,hunit+slot_depth+1,slot_depth)
+  b10b2.translate((hunit-1.0-1.0-slot_width,hunit*(length-1)-slot_depth-1,vunit))
+  b = b.fuse(b10b2)
+
+  # Block holes
+  b11 = makeBox(hunit,1.0,vunit)
+  b11.translate((0,hunit,0))
+  b = b.fuse(b11)
+  b11a = makeBox(hunit,1.0,vunit)
+  b11a.translate((0,hunit*(length-1)-1.0,0))
+  b = b.fuse(b11a)
+
+  
+  # Clip everything outside off the play boundary
+  play_boundary = makeBox(
+    hunit*2-2*0.1,
+    hunit*length-2*0.1,
+    vunit*3-0.1 + vunit) # extra vunit for knobs
+  play_boundary.translate((
+    0.1,
+    0.1,
+    0.1-vunit))
+  b = b.common(play_boundary)
+  
+  return b
+  
