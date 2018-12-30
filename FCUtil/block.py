@@ -461,40 +461,39 @@ def box_side_bottom(length):
   b = b.fuse(b2a)
   
   # middle layer outside
-  b3 = myblock(1,2,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False,
+  b3 = myblock(1,2,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=True,
     horizontal_hole_interval=2)
   b3.translate((hunit,hunit,0))
   b = b.fuse(b3)
 
-  b3a = myblock(1,2,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False,
+  b3a = myblock(1,2,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=True,
     horizontal_hole_interval=2)
   b3a.translate((hunit,hunit*(length-3),0))
   b = b.fuse(b3a)
 
   # top layer end outside
-  b5 = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False,
+  b5 = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=True,
                horizontal_hole_offset=0.5*hunit)
   b5.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
   b5.translate((hunit,hunit,vunit))
   b = b.fuse(b5)
 
-  b5a = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=False,
+  b5a = myblock(1,1,1,has_under_tubes=False,has_horizontal_holes=True,bottom_play=0.0,horizontal_play=0.0,solid=True,has_knobs=True,
                horizontal_hole_offset=0.5*hunit)
   b5a.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), -90)
   b5a.translate((hunit,hunit*length,vunit))
   b = b.fuse(b5a)
 
-  # Slot #1 in the top layer
-  #slot = makeBox(slot_width,length*hunit,slot_depth)
-  #slot.translate((1.5,0,vunit*2-slot_depth))
-  #b = b.cut(slot)
-  
   # bottom layer
-  b7  = myblock(2,length,1,has_under_tubes=False,has_horizontal_holes=False,bottom_play=0.0,horizontal_play=0.0,solid=False,has_knobs=False,
+  b7  = myblock(2,length,1,has_under_tubes=True,has_horizontal_holes=False,bottom_play=0.0,horizontal_play=0.0,solid=False,has_knobs=True,
                 top_thickness=1.1+slot_width,has_struts=0,strut_sides=1)
   b7.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), 180)
   b7.translate((2*hunit,length*hunit,-vunit))
 
+  # Take off inside row of knobs
+  cut_away = makeBox(hunit,hunit*length,vunit)
+  b7 = b7.cut(cut_away)
+  
   # Slot in the bottom layer
   slot = makeBox(slot_depth,hunit*length,slot_width)
   slot.translate((0,0,-slot_width))
