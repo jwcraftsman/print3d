@@ -24,6 +24,8 @@ def block(number_of_x_knobs,
   has_struts                = kw.get('has_struts', False)
   has_vertical_holes        = kw.get('has_vertical_holes', False)
   has_horizontal_holes      = kw.get('has_horizontal_holes', False)
+  has_keystone              = kw.get('has_keystone', True)
+  keystone_angle            = kw.get('keystone_angle',              0          ) # degrees
   units = unit              = kw.get('unit',                        1.6 * mm   )
   horizontal_pitch          = kw.get('horizontal_pitch',            5.0 * units)
   vertical_pitch            = kw.get('vertical_pitch',              6.0 * units)
@@ -231,11 +233,12 @@ def block(number_of_x_knobs,
       b = b.cut(counterbore_cavity)
 
       # Keystone cutout for printing
-      if 1: #i == 0:
+      if has_keystone:
         w = 2.0 * mm
         h = 2.0 * mm
         keystone = makeBox(actual_width, w, h)
         keystone.translate((x, y - w/2.0, horizontal_hole_vertical_offset + horizontal_hole_counterbore_diameter/2.0 - h +0.1 ))
+        keystone.rotate(Base.Vector(horizontal_pitch/2.0,horizontal_pitch/2.0,vertical_pitch-horizontal_pitch/2.0), Base.Vector(1,0,0), keystone_angle)
         b = b.cut(keystone)
         
   # Clip everything outside off the play boundary
@@ -429,7 +432,7 @@ def box_side(length):
   
   return b
   
-def box_side_bottom(length):
+def box_side_bottom_old1(length):
   hunit = 5*1.6
   vunit = 6*1.6
   slot_width = 2.5 # mm
