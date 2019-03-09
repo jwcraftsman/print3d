@@ -257,12 +257,18 @@ def block(number_of_x_knobs,
 def myblock(number_of_x_knobs,
 	    number_of_y_knobs,
 	    number_of_vertical_units,
+            loose=False,
             **kw):
   units = unit                    = kw.get('unit',                         1.6 * mm   )
-  kw['knob_diameter']             = kw.get('knob_diameter', 3.0 * units + 0.15 * mm   )
   kw['bottom_play']               = kw.get('bottom_play',                  0.1 * mm   )
-  kw['under_tube_outer_diameter'] = kw.get('under_tube_outer_diameter',
-                                                     (5*sqrt(2)-3)*units + 0.1 * mm   )
+  if loose:
+    kw['knob_diameter']             = kw.get('knob_diameter', 3.0 * units + 0.05 * mm   )
+    kw['under_tube_outer_diameter'] = kw.get('under_tube_outer_diameter',
+                                             (5*sqrt(2)-3)*units * mm   )
+  else:
+    kw['knob_diameter']             = kw.get('knob_diameter', 3.0 * units + 0.15 * mm   )
+    kw['under_tube_outer_diameter'] = kw.get('under_tube_outer_diameter',
+                                             (5*sqrt(2)-3)*units + 0.1 * mm   )
   return block(number_of_x_knobs,
 	       number_of_y_knobs,
 	       number_of_vertical_units,

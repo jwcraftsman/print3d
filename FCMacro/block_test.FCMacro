@@ -1,6 +1,7 @@
 from FCUtil.block import *
 
 def horizontal_dove_tail(gap=0,long_gap=None,back_gap=None,mirror=False,short=False,shallow=False):
+  wt = 1.5
   slot_width = 3.0 #3.7 # 2.5 # mm
   if long_gap is None:
      long_gap = gap
@@ -16,7 +17,7 @@ def horizontal_dove_tail(gap=0,long_gap=None,back_gap=None,mirror=False,short=Fa
      ratio = 2/3.0
   ratio2 = 2/3.0
   if shallow:
-     depth = hunit - slot_width
+     depth = hunit - (slot_width + (wt-1))
   else:
      depth = hunit
   b  = makeBox((hunit-2*(1+gap))*ratio, height-2*(1+long_gap), depth-(1+back_gap))
@@ -40,6 +41,7 @@ def horizontal_dove_tail(gap=0,long_gap=None,back_gap=None,mirror=False,short=Fa
   return b
     
 def horizontal_dove_tail_hole(gap=0, long_gap=None,back_gap=None,mirror=False,short=False,shallow=False,shrink_depth=False):
+  wt = 1.5
   slot_width = 3.0 #3.7 # 2.5 # mm
   vunit = 6*1.6
   hunit = 5*1.6
@@ -47,7 +49,7 @@ def horizontal_dove_tail_hole(gap=0, long_gap=None,back_gap=None,mirror=False,sh
   hole = horizontal_dove_tail(gap, long_gap, back_gap, short=short,shallow=shallow)
   b = b.cut(hole)
   if shrink_depth:
-     c = makeBox(hunit*2, hunit*4, slot_width+vunit-hunit)
+     c = makeBox(hunit*2, hunit*4, (slot_width+(wt-1))+vunit-hunit)
      c.translate((-hunit,-hunit*2,0))
      b = b.cut(c)
   if mirror:
@@ -67,6 +69,7 @@ def vertical_dove_tail(gap=0, long_gap=None, back_gap=None, mirror=False, short=
   return b
 
 def vertical_dove_tail_hole(gap=0, long_gap=None, back_gap=None, mirror=False, short=False, has_knob=False,shallow=False,shrink_depth=False,shrink_height=False):
+  wt = 1.5
   slot_width = 3.0 #3.7 # 2.5 # mm
   vunit = 6*1.6
   hunit = 5*1.6
@@ -81,8 +84,8 @@ def vertical_dove_tail_hole(gap=0, long_gap=None, back_gap=None, mirror=False, s
   hole.translate((0,hunit,0))
   b = b.cut(hole)
   if shrink_depth:
-     c = makeBox(hunit*2, slot_width, vunit*2)
-     c.translate((-hunit,hunit-slot_width,-vunit))
+     c = makeBox(hunit*2, (slot_width+(wt-1)), vunit*2)
+     c.translate((-hunit,hunit-(slot_width+(wt-1)),-vunit))
      b = b.cut(c)
   if shrink_height and vsize==2:
      c = makeBox(hunit*2, hunit*2, vunit)
@@ -94,13 +97,12 @@ def vertical_dove_tail_hole(gap=0, long_gap=None, back_gap=None, mirror=False, s
 
 def joiner():
   units = 1.6
-  knob_diameter = 3.0 * units + 0.15
+  knob_diameter = 3.0 * units + 0.05 # "loose"
   knob_height = 1.0 * units  + 0.2
   hunit = 5*1.6
   vunit = 6*1.6
   b = horizontal_dove_tail(mirror=True)
   b.translate((0,hunit,0))
-  #b1 = makeBox(hunit*3-3, 3*hunit-3, (hunit-1)/3.0)
   b1 = makeBox(hunit*3-4, 3*hunit-4, (hunit-1)-(vunit/3.0)-.1)
   b1.translate((-3*hunit+4,0,vunit-hunit+1))
   b = b.fuse(b1)
@@ -109,7 +111,6 @@ def joiner():
   b2.rotate(Base.Vector(0,0,0),Base.Vector(0,0,1),90)
   b2.translate((0,-hunit,0))
   b = b.fuse(b2)
-  #corner = makeBox((hunit*3-3)*2, 3*hunit-3, (hunit-1)/3.0)
   corner = makeBox((hunit*3-4)*2, 3*hunit-4, (hunit-1)-(vunit/3.0)-.1)
   corner.rotate(Base.Vector(0,0,0),Base.Vector(0,0,1),45)
   corner.translate((-3*hunit+4,0,vunit-hunit+1))
@@ -136,6 +137,7 @@ def box_corner(height):
   vunit = 6*1.6
   slot_width = 3.0 #3.7 # 2.5 # mm
   slot_depth = 0.7*vunit
+  wt = 1.5
   
   # Dove tails
   b = vertical_dove_tail()
@@ -159,19 +161,19 @@ def box_corner(height):
   b = b.cut(slot)
   
   # Outside wall of slot
-  b4 = makeBox(1.0,2*hunit,slot_depth)
-  b4.translate((2*hunit-1.0,-2*hunit,vunit))
+  b4 = makeBox(wt,2*hunit,slot_depth)
+  b4.translate((2*hunit-wt,-2*hunit,vunit))
   b = b.fuse(b4)
-  b4a = makeBox(2*hunit,1.0,slot_depth)
+  b4a = makeBox(2*hunit,wt,slot_depth)
   b4a.translate((0,-2*hunit,vunit))
   b = b.fuse(b4a)
 
   # Inside wall of slot
-  b5 = makeBox(1.0,2*hunit-slot_width-1,slot_depth)
-  b5.translate((2*hunit-2.0-slot_width,-2*hunit+slot_width+1,vunit))
+  b5 = makeBox(wt,2*hunit-slot_width-wt,slot_depth)
+  b5.translate((2*hunit-2.0*wt-slot_width,-2*hunit+slot_width+wt,vunit))
   b = b.fuse(b5)
-  b5a = makeBox(2*hunit-slot_width-1,1.0,slot_depth)
-  b5a.translate((0,-2*hunit+slot_width+1,vunit))
+  b5a = makeBox(2*hunit-slot_width-wt,wt,slot_depth)
+  b5a.translate((0,-2*hunit+slot_width+wt,vunit))
   b = b.fuse(b5a)
 
   # Joining holes
@@ -191,28 +193,28 @@ def box_corner(height):
   b = b.fuse(b7)
 
   # Fill
-  b8 = makeBox(2*hunit-slot_width-2,2*hunit-slot_width-2,2.5)
-  b8.translate((0,-2*hunit+slot_width+2,vunit))
+  b8 = makeBox(2*hunit-slot_width-2*wt,2*hunit-slot_width-2*wt,2.5)
+  b8.translate((0,-2*hunit+slot_width+2*wt,vunit))
   b = b.fuse(b8)
 
   # column
   col_height = vunit*(height-3)
-  b9 = makeBox(slot_width+2,slot_width+2,col_height)
-  b9.translate((2*hunit-(slot_width+2),-2*hunit,vunit))
+  b9 = makeBox(slot_width+2*wt,slot_width+2*wt,col_height)
+  b9.translate((2*hunit-(slot_width+2*wt),-2*hunit,vunit))
   b = b.fuse(b9)
 
   # bottom vertical slot sides
-  b10 = makeBox(1.0,slot_depth,col_height)
-  b10.translate((2*hunit-1,-2*hunit+(slot_width+2),vunit))
+  b10 = makeBox(wt,slot_depth,col_height)
+  b10.translate((2*hunit-wt,-2*hunit+(slot_width+2*wt),vunit))
   b = b.fuse(b10)
-  b10a = makeBox(1.0,slot_depth,col_height)
-  b10a.translate((2*hunit-2-slot_width,-2*hunit+(slot_width+2),vunit))
+  b10a = makeBox(wt,slot_depth,col_height)
+  b10a.translate((2*hunit-2*wt-slot_width,-2*hunit+(slot_width+2*wt),vunit))
   b = b.fuse(b10a)
-  b10b = makeBox(slot_depth,1.0,col_height)
-  b10b.translate((2*hunit-2-slot_width-slot_depth,-2*hunit+(slot_width+1),vunit))
+  b10b = makeBox(slot_depth,wt,col_height)
+  b10b.translate((2*hunit-2*wt-slot_width-slot_depth,-2*hunit+(slot_width+wt),vunit))
   b = b.fuse(b10b)
-  b10c = makeBox(slot_depth,1.0,col_height)
-  b10c.translate((2*hunit-2-slot_width-slot_depth,-2*hunit,vunit))
+  b10c = makeBox(slot_depth,wt,col_height)
+  b10c.translate((2*hunit-2*wt-slot_width-slot_depth,-2*hunit,vunit))
   b = b.fuse(b10c)
 
   b.translate((0,2*hunit,vunit))
@@ -248,25 +250,27 @@ def box_corner(height):
   b = b.fuse(b16)
   
   # top vertical slot sides
-  b17 = makeBox(1.0,slot_depth+hunit,slot_depth)
-  b17.translate((2*hunit-1,hunit,(height-1)*vunit-slot_depth))
+  b17 = makeBox(wt,slot_depth+hunit,slot_depth)
+  b17.translate((2*hunit-wt,hunit,(height-1)*vunit-slot_depth))
   b = b.fuse(b17)
-  b18 = makeBox(1.0,slot_depth+hunit,slot_depth)
-  b18.translate((2*hunit-1-slot_width-1,hunit,(height-1)*vunit-slot_depth))
+  b18 = makeBox(wt,slot_depth+hunit,slot_depth)
+  b18.translate((2*hunit-wt-slot_width-wt,hunit,(height-1)*vunit-slot_depth))
   b = b.fuse(b18)
-  b19 = makeBox(slot_depth+hunit,1.0,slot_depth)
+  b19 = makeBox(slot_depth+hunit,wt,slot_depth)
   b19.translate((-slot_depth,0,(height-1)*vunit-slot_depth))
   b = b.fuse(b19)
-  b20 = makeBox(slot_depth+hunit,1.0,slot_depth)
-  b20.translate((-slot_depth,slot_width+1,(height-1)*vunit-slot_depth))
+  b20 = makeBox(slot_depth+hunit,wt,slot_depth)
+  b20.translate((-slot_depth,slot_width+wt,(height-1)*vunit-slot_depth))
   b = b.fuse(b20)
 
   test = makeBox(hunit*5,hunit*5,vunit*3)
-  test.translate((-hunit,-hunit,0))
-  b = b.cut(test)
+  #test.translate((-hunit,-hunit,0))
+  test.translate((-hunit,-hunit,3*vunit))
+  #b = b.cut(test)
   return b
   
 def box_side_bottom(length):
+  wt = 1.5
   hunit = 5*1.6
   vunit = 6*1.6
   slot_width = 3.0 # 3.7 # 2.5 # mm
@@ -282,7 +286,7 @@ def box_side_bottom(length):
   # end test
   
   # near dovetails
-  b = vertical_dove_tail_hole(-vgap, -v_long_gap, -v_back_gap) # slightly bigger
+  b = vertical_dove_tail_hole(-vgap, -v_long_gap, -v_back_gap,shrink_height=True) # slightly bigger
   b.rotate(Base.Vector(0,0,0),Base.Vector(0,0,1),-90)
   b.translate((0,hunit,0))
   b1 = horizontal_dove_tail_hole(mirror=True)
@@ -302,7 +306,7 @@ def box_side_bottom(length):
   
   # bottom layer
   b2  = myblock(2,length,1,has_under_tubes=True,has_horizontal_holes=False,bottom_play=0.0,horizontal_play=0.0,solid=False,has_knobs=False,
-                top_thickness=1.1+slot_width,has_struts=0,strut_sides=1)
+                top_thickness=1.1+slot_width,has_struts=0,strut_sides=1,loose=True)
   b2.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), 180)
   b2.translate((2*hunit,length*hunit,-vunit))
   b = b.fuse(b2)
@@ -313,33 +317,33 @@ def box_side_bottom(length):
   b = b.cut(slot)
 
   # Top of slot
-  b3 = makeBox(hunit*2-2-slot_width,hunit*length,1.0)
+  b3 = makeBox(hunit*2-2*wt-slot_width,hunit*length,1.0)
   b = b.fuse(b3)
 
   # Outside wall of slot
-  b4 = makeBox(1.0,hunit*(length),slot_depth)
-  b4.translate((2*hunit-1.0,0,0))
+  b4 = makeBox(wt,hunit*(length),slot_depth)
+  b4.translate((2*hunit-wt,0,0))
   b = b.fuse(b4)
-  b4a = makeBox(1.0,slot_depth,slot_depth+vunit)
-  b4a.translate((2*hunit-1.0,0,0))
+  b4a = makeBox(wt,slot_depth,vunit+slot_depth)
+  b4a.translate((2*hunit-wt,0,0))
   b = b.fuse(b4a)
-  b4a1 = makeBox(1.0,slot_depth,slot_depth+vunit)
-  b4a1.translate((2*hunit-1.0,hunit*length-slot_depth,0))
+  b4a1 = makeBox(wt,slot_depth,vunit+slot_depth)
+  b4a1.translate((2*hunit-wt,hunit*length-slot_depth,0))
   b = b.fuse(b4a1)
 
   # Inside wall of slot
-  b5 = makeBox(1.0,hunit*(length),slot_depth)
-  b5.translate((2*hunit-2.0-slot_width,0,0))
+  b5 = makeBox(wt,hunit*(length),slot_depth)
+  b5.translate((2*hunit-2.0*wt-slot_width,0,0))
   b = b.fuse(b5)
-  b5a = makeBox(1.0,slot_depth,slot_depth+vunit)
-  b5a.translate((2*hunit-2.0-slot_width,0,0))
+  b5a = makeBox(wt,slot_depth,slot_depth+vunit)
+  b5a.translate((2*hunit-2.0*wt-slot_width,0,0))
   b = b.fuse(b5a)
-  b5a1 = makeBox(1.0,slot_depth,slot_depth+vunit)
-  b5a1.translate((2*hunit-2.0-slot_width,hunit*length-slot_depth,0))
+  b5a1 = makeBox(wt,slot_depth,slot_depth+vunit)
+  b5a1.translate((2*hunit-2.0*wt-slot_width,hunit*length-slot_depth,0))
   b = b.fuse(b5a1)
 
   # far dovetails
-  b6 = vertical_dove_tail_hole(-vgap, -v_long_gap, -v_back_gap, mirror=True) # slightly bigger
+  b6 = vertical_dove_tail_hole(-vgap, -v_long_gap, -v_back_gap, mirror=True,shrink_height=True) # slightly bigger
   b6.rotate(Base.Vector(hunit/2.0,hunit/2.0,0),Base.Vector(0,0,1),-90)
   b6.translate((0,hunit*(length-1),0))
   b = b.fuse(b6)
@@ -378,6 +382,7 @@ def box_side_bottom(length):
   return b
 
 def box_side_top(length):
+  wt = 1.5
   hunit = 5*1.6
   vunit = 6*1.6
   slot_width = 3.0 # 3.7 # 2.5 # mm
@@ -406,24 +411,24 @@ def box_side_top(length):
 
   # middle
   b2  = myblock(2,length-6,1,has_under_tubes=False,has_horizontal_holes=False,bottom_play=0.0,horizontal_play=0.0,solid=False,has_knobs=True,
-                has_struts=0,strut_sides=1,wall_thickness=1)
+                has_struts=0,strut_sides=1,loose=True)
   b2.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), 180)
   b2.translate((2*hunit,(length-3)*hunit,0))
   b = b.fuse(b2)
 
   # 1x3's
   b3  = myblock(1,3,1,has_under_tubes=False,has_horizontal_holes=False,bottom_play=0.0,horizontal_play=0.0,solid=False,has_knobs=True,
-                has_struts=0,strut_sides=1,wall_thickness=1)
+                has_struts=0,strut_sides=1,loose=True)
   b3.translate((hunit,0,0))
   b = b.fuse(b3)
   b6  = myblock(1,3,1,has_under_tubes=False,has_horizontal_holes=False,bottom_play=0.0,horizontal_play=0.0,solid=False,has_knobs=True,
-                has_struts=0,strut_sides=1,wall_thickness=1)
+                has_struts=0,strut_sides=1,loose=True)
   b6.translate((hunit,hunit*(length-3),0))
   b = b.fuse(b6)
 
   # clear out underside for side
-  b7 = makeBox(hunit-1,hunit*length-2,vunit-top_thickness)
-  b7.translate((hunit,1,0))
+  b7 = makeBox(hunit-wt,hunit*length-2*wt,vunit-top_thickness)
+  b7.translate((hunit,wt,0))
   b = b.cut(b7)
 
   # Clip everything outside off the play boundary
@@ -512,20 +517,20 @@ if False:
 if True:
   hunit = 5*1.6
   vunit = 6*1.6
-  b = box_side_bottom(12)
-  top_b, bottom_b = vsplit(b, -2.5)
-  show(top_b)
+  b = box_side_bottom(28) # 12 28
+  #top_b, bottom_b = vsplit(b, -2.5)
+  #show(top_b)
   #show(bottom_b)
-  #show(b)
-  j = joiner()
-  show(j)
-  c = box_corner(5) # 16
-  c.translate((0,-2*hunit,0))
-  c.rotate(Base.Vector(0,0,0), Base.Vector(0,1,0), 90)
-  show(c)
-  t = box_side_top(12)
-  t.translate((0,0,vunit*4))
-  show(t)
+  show(b)
+  #j = joiner()
+  #show(j)
+  #c = box_corner(16) # 16 5
+  #c.translate((0,-2*hunit,0))
+  #c.rotate(Base.Vector(0,0,0), Base.Vector(0,1,0), 90)
+  #show(c)
+  #t = box_side_top(28) # 12 28
+  #t.translate((0,0,vunit*4))
+  #show(t)
   
 if False:
   b = box_side_top(12)
